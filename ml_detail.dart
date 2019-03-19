@@ -26,7 +26,6 @@ class MLDetail extends StatefulWidget {
 class _MLDetailState extends State<MLDetail> {
   UserCard userCard;
   var phoneList = new List();
-  var emailList = new List();
   var db = new DatabaseHelper();
 
   List _contactTypes = ["Tel", "E-mail", "Fax"];
@@ -42,7 +41,7 @@ class _MLDetailState extends State<MLDetail> {
   List<VisionBarcode> _currentBarcodeLabels = <VisionBarcode>[];
   List<VisionLabel> _currentLabelLabels = <VisionLabel>[];
   List<VisionFace> _currentFaceLabels = <VisionFace>[];
-
+ List<VisionText> vstd = new List();
   Stream sub;
   StreamSubscription<dynamic> subscription;
   int nbphone = 0;
@@ -72,6 +71,33 @@ class _MLDetailState extends State<MLDetail> {
         if (this.mounted) {
           setState(() {
             _currentTextLabels = currentLabels;
+            if(currentLabels != null){
+
+              var emailList = new List();
+              emailList = Utils.createMlValue("email", _currentTextLabels);
+              emailList.forEach((emailController)  {
+             //   var textEditingController = new TextEditingController(text: filename);
+                textEdConEmail.add(new TextEditingController(text: emailController));
+              });
+              phoneList = Utils.createMlValue("phone", _currentTextLabels);
+              phoneList.forEach((phoneController) {
+                textEdConPhone.add( new TextEditingController(text: phoneController));
+              });
+
+              var headerList = new List();
+              headerList = Utils.createMlValue("header", _currentTextLabels);
+              String headerText ="" ;
+              String headerTextFinale;
+              headerList.forEach((filename)  {
+                headerText = " $headerText  $filename";
+              });
+
+              headerTextFinale = headerText.trim();
+              textEdConHeader = new TextEditingController(text: headerTextFinale);
+
+             // emailList.clear();
+            }
+            this.vstd = currentLabels;
           });
         }
       } else if (widget._scannerType == BARCODE_SCANNER) {
@@ -104,7 +130,13 @@ class _MLDetailState extends State<MLDetail> {
   @override
   void dispose() {
     // TODO: implement dispose
-
+    textEdConEmail.forEach((controller)  {
+      controller.dispose();
+    });
+      textEdConPhone.forEach((controller)  {
+      controller.dispose();
+    });
+    textEdConHeader.dispose();
     super.dispose();
     subscription?.cancel();
   }
@@ -139,7 +171,7 @@ class _MLDetailState extends State<MLDetail> {
           decoration: BoxDecoration(
             image: DecorationImage(image: AssetImage("assets/images/whatsappbac.jpg"), fit: BoxFit.cover),
           ),
-          height: 100.0,
+          height: 150.0,
           child: Center(
             child: widget._file == null
                 ? Text('No Image')
@@ -173,7 +205,6 @@ class _MLDetailState extends State<MLDetail> {
           )),
     );
   }
-
   Widget buildBarcodeList<T>(List<T> barcodes) {
     if (barcodes.length == 0) {
       return Expanded(
@@ -214,7 +245,6 @@ class _MLDetailState extends State<MLDetail> {
       ),
     );
   }
-
   Widget buildTextList(List<VisionText> texts) {
     // DANI
     if (texts.length == 0) {
@@ -232,8 +262,6 @@ class _MLDetailState extends State<MLDetail> {
       ),
     );
   }
-
-
   Widget _buildTextRow(text) {
     return ListTile(
       title: TextFormField(
@@ -313,13 +341,10 @@ class _MLDetailState extends State<MLDetail> {
               ]));
   }
   // Save data to database
-
   List<Widget> buildTextEmail(List<VisionText> texts) {
-    emailList = Utils.createMlValue("email", texts);
     List<Widget> listWidgetEmail = new List();
-    emailList.forEach((filename)  {
-      var textEditingController = new TextEditingController(text: filename);
-      textEdConEmail.add(textEditingController);
+    textEdConEmail.forEach((controller)  {
+    if(controller.text != null && controller.text.isNotEmpty && controller.text != ""){
       listWidgetEmail.add( Card(
         margin: EdgeInsets.only(left: 30, right:30, top:30),
         elevation: 11,
@@ -338,19 +363,17 @@ class _MLDetailState extends State<MLDetail> {
               ),
               contentPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0)
           ),
-          controller: textEditingController,
+          controller: controller,
           keyboardType: TextInputType.emailAddress,
         ),
       ));
-    });
+    }});
     return listWidgetEmail;
   }
   List<Widget> buildTextPhone(List<VisionText> texts) {
-    phoneList = Utils.createMlValue("phone", texts);
     List<Widget> listWidgetPhone = new List();
-    phoneList.forEach((filename)  {
-      var textEditingController = new TextEditingController(text: filename);
-      textEdConPhone.add(textEditingController);
+    textEdConPhone.forEach((controller){
+      if(controller.text != null && controller.text.isNotEmpty && controller.text != ""){
       listWidgetPhone.add( Card(
         margin: EdgeInsets.only(left: 30, right:30, top:30),
         elevation: 11,
@@ -369,24 +392,14 @@ class _MLDetailState extends State<MLDetail> {
               ),
               contentPadding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0)
           ),
-          controller: textEditingController,
+          controller: controller,
           keyboardType: TextInputType.phone,
         ),
       ));
-    });
+    }});
     return  listWidgetPhone;
   }
   Widget buildTextHeader(List<VisionText> texts) {
-    var headerList = new List();
-    headerList = Utils.createMlValue("header", texts);
-    String headerText ="" ;
-    String headerTextFinale;
-    headerList.forEach((filename)  {
-      headerText = " $headerText  $filename";
-    });
-    headerTextFinale = headerText.trim();
-    textEdConHeader = new TextEditingController(text: headerTextFinale);
-    //extEdConEmail.add(textEditingController);
     return Card(
       margin: EdgeInsets.only(left: 20, right:20, top:30),
       elevation: 11,
@@ -534,12 +547,8 @@ class _MLDetailState extends State<MLDetail> {
     int tel = 0;
     DateTime now = DateTime.now();
     String formattedDate = DateFormat('dd--MM-yyyy kk:mm').format(now);
-    String date = DateFormat.yMMMd().format(DateTime.now());
-
     var userCard = new UserCard(textEdConHeader.text,formattedDate,"1","Groupe1",widget._file.path);
     resul =  await db.saveUserCard(userCard);
-
-
     var contactList = new List();
     var emailList = new List();
 
